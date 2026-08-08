@@ -1,12 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Catalog, HostMetadata, LaunchMode } from "./types";
+import { DEFAULT_ACCENT_COLOR } from "./theme";
+import type { AppSettings, Catalog, HostMetadata, LaunchMode } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window;
 const demoKey = "relaydeck-demo-state";
+const demoSettingsKey = "relaydeck-demo-settings";
 
 const demoCatalog: Catalog = {
   configPath: "~/.ssh/config",
   warnings: ["ブラウザプレビューです。Tauri版では実際のSSH configを読み込みます。"],
+  settings: { accentColor: DEFAULT_ACCENT_COLOR },
   hosts: [
     {
       alias: "example-web-01",
@@ -36,7 +39,12 @@ const demoCatalog: Catalog = {
 
 function loadDemo(): Catalog {
   const saved = localStorage.getItem(demoKey);
-  return saved ? { ...demoCatalog, hosts: JSON.parse(saved) } : structuredClone(demoCatalog);
+  const savedSettings = localStorage.getItem(demoSettingsKey);
+  return {
+    ...structuredClone(demoCatalog),
+    hosts: saved ? JSON.parse(saved) : structuredClone(demoCatalog.hosts),
+    settings: savedSettings ? JSON.parse(savedSettings) : structuredClone(demoCatalog.settings)
+  };
 }
 
 export async function getCatalog(): Promise<Catalog> {
@@ -48,6 +56,11 @@ export async function saveMetadata(metadata: HostMetadata): Promise<void> {
   const catalog = loadDemo();
   catalog.hosts = catalog.hosts.map((host) => host.alias === metadata.alias ? { ...host, metadata } : host);
   localStorage.setItem(demoKey, JSON.stringify(catalog.hosts));
+}
+
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  if (isTauri) return invoke("save_settings", { settings });
+  localStorage.setItem(demoSettingsKey, JSON.stringify(settings));
 }
 
 export async function launchConnection(alias: string, mode: LaunchMode): Promise<HostMetadata> {

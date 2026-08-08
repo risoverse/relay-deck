@@ -24,6 +24,7 @@ iTerm2 -> ssh <alias> -> OpenSSH resolves actual settings
 | Host、HostName、User、Port、ProxyJump、IdentityFile | OpenSSH | `~/.ssh/config` とInclude先 |
 | 表示名、フォルダ、タグ、お気に入り、メモ | RelayDeck | app data `state.json` |
 | 最終接続日時、接続回数 | RelayDeck | app data `state.json` |
+| アクセントカラー | RelayDeck | app data `state.json` |
 | パスワード、鍵、パスフレーズ | 保存しない | なし |
 
 ## 3. 境界

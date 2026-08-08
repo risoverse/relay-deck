@@ -9,6 +9,8 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 
+const DEFAULT_ACCENT_COLOR: &str = "#7C5CE7";
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HostMetadata {
@@ -22,10 +24,26 @@ struct HostMetadata {
     connection_count: u64,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase")]
+struct AppSettings {
+    accent_color: String,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            accent_color: DEFAULT_ACCENT_COLOR.to_string(),
+        }
+    }
+}
+
 #[derive(Default, Deserialize, Serialize)]
 struct AppState {
     #[serde(default)]
     metadata: BTreeMap<String, HostMetadata>,
+    #[serde(default)]
+    settings: AppSettings,
 }
 
 #[derive(Serialize)]
@@ -42,6 +60,7 @@ struct Catalog {
     hosts: Vec<CatalogHost>,
     config_path: String,
     warnings: Vec<String>,
+    settings: AppSettings,
 }
 
 fn state_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -108,6 +127,7 @@ fn get_catalog(app: tauri::AppHandle) -> Result<Catalog, String> {
         hosts,
         config_path: config_path.to_string_lossy().into_owned(),
         warnings: parsed.warnings,
+        settings: state.settings,
     })
 }
 
@@ -125,6 +145,25 @@ fn save_metadata(app: tauri::AppHandle, mut metadata: HostMetadata) -> Result<()
     let mut state = read_state(&app)?;
     state.metadata.insert(metadata.alias.clone(), metadata);
     write_state(&app, &state)
+}
+
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, mut settings: AppSettings) -> Result<(), String> {
+    if !is_valid_hex_color(&settings.accent_color) {
+        return Err("アクセントカラーが不正です".into());
+    }
+    settings.accent_color.make_ascii_uppercase();
+    let mut state = read_state(&app)?;
+    state.settings = settings;
+    write_state(&app, &state)
+}
+
+fn is_valid_hex_color(color: &str) -> bool {
+    color.len() == 7
+        && color.starts_with('#')
+        && color[1..]
+            .bytes()
+            .all(|character| character.is_ascii_hexdigit())
 }
 
 #[tauri::command]
@@ -199,12 +238,33 @@ end run
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validates_six_digit_hex_colors() {
+        assert!(is_valid_hex_color("#7C5CE7"));
+        assert!(is_valid_hex_color("#abcdef"));
+        assert!(!is_valid_hex_color("purple"));
+        assert!(!is_valid_hex_color("#12345"));
+        assert!(!is_valid_hex_color("#12345G"));
+    }
+
+    #[test]
+    fn defaults_settings_when_reading_an_existing_state() {
+        let state: AppState = serde_json::from_str(r#"{"metadata": {}}"#).unwrap();
+        assert_eq!(state.settings.accent_color, DEFAULT_ACCENT_COLOR);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_catalog,
             save_metadata,
+            save_settings,
             launch_connection
         ])
         .run(tauri::generate_context!())

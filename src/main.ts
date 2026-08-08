@@ -1,10 +1,11 @@
 import "./styles.css";
-import { getCatalog, launchConnection, saveMetadata } from "./api";
+import { getCatalog, launchConnection, saveMetadata, saveSettings } from "./api";
 import { displayName, filterHosts, type Scope } from "./filter";
+import { applyAccentColor, DEFAULT_ACCENT_COLOR } from "./theme";
 import type { Catalog, HostMetadata, LaunchMode, SshHost } from "./types";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
-let catalog: Catalog = { hosts: [], configPath: "", warnings: [] };
+let catalog: Catalog = { hosts: [], configPath: "", warnings: [], settings: { accentColor: DEFAULT_ACCENT_COLOR } };
 let selectedAlias = "";
 let query = "";
 let scope: Scope = "all";
@@ -16,7 +17,10 @@ root.innerHTML = `
   <div class="titlebar" data-tauri-drag-region="deep">
     <div class="brand" data-tauri-drag-region><span class="brand-mark" data-tauri-drag-region>R</span><span data-tauri-drag-region>RelayDeck</span></div>
     <div class="search-wrap" data-tauri-drag-region="false"><span>⌕</span><input id="search" type="search" placeholder="接続先を検索" autocomplete="off"><kbd>⌘ K</kbd></div>
-    <button class="icon-button" id="reload" title="SSH configを再読込" aria-label="再読込" data-tauri-drag-region="false">↻</button>
+    <div class="title-actions" data-tauri-drag-region="false">
+      <button class="icon-button" id="settings" title="設定" aria-label="設定" data-tauri-drag-region="false">⚙</button>
+      <button class="icon-button" id="reload" title="SSH configを再読込" aria-label="再読込" data-tauri-drag-region="false">↻</button>
+    </div>
   </div>
   <main class="workspace">
     <aside class="sidebar" id="sidebar"></aside>
@@ -26,6 +30,17 @@ root.innerHTML = `
     </section>
     <aside class="detail-panel" id="detail"></aside>
   </main>
+  <div class="settings-overlay" id="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <section class="settings-dialog">
+      <div class="settings-head"><div><span>環境設定</span><h2 id="settings-title">外観</h2></div><button class="dialog-close" id="settings-close" type="button" aria-label="閉じる">×</button></div>
+      <div class="accent-setting">
+        <label for="accent-color">アクセントカラー</label>
+        <p>アイコン、接続ボタン、選択状態に共通で使用します。</p>
+        <div class="color-row"><input id="accent-color" type="color" value="${DEFAULT_ACCENT_COLOR}"><output id="accent-value">${DEFAULT_ACCENT_COLOR}</output><button class="reset-color" id="reset-color" type="button">デフォルト</button></div>
+      </div>
+      <div class="settings-actions"><button class="secondary-button" id="settings-cancel" type="button">キャンセル</button><button class="primary-button" id="settings-save" type="button">保存</button></div>
+    </section>
+  </div>
   <div class="toast" id="toast" role="status"></div>
 `;
 
@@ -38,6 +53,47 @@ document.addEventListener("keydown", (event) => {
   if (event.metaKey && event.key === "Enter" && selectedAlias) void connectSelected();
 });
 document.querySelector("#reload")!.addEventListener("click", () => void load());
+
+const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
+const accentInput = document.querySelector<HTMLInputElement>("#accent-color")!;
+const accentValue = document.querySelector<HTMLOutputElement>("#accent-value")!;
+let savedAccentColor = DEFAULT_ACCENT_COLOR;
+
+function previewAccent(color: string): void {
+  const normalized = applyAccentColor(color);
+  accentInput.value = normalized;
+  accentValue.value = normalized;
+}
+
+function openSettings(): void {
+  savedAccentColor = catalog.settings.accentColor;
+  previewAccent(savedAccentColor);
+  settingsDialog.hidden = false;
+  document.querySelector<HTMLButtonElement>("#settings-close")!.focus();
+}
+
+function cancelSettings(): void {
+  previewAccent(savedAccentColor);
+  settingsDialog.hidden = true;
+}
+
+document.querySelector("#settings")!.addEventListener("click", openSettings);
+document.querySelector("#settings-close")!.addEventListener("click", cancelSettings);
+document.querySelector("#settings-cancel")!.addEventListener("click", cancelSettings);
+document.querySelector("#reset-color")!.addEventListener("click", () => previewAccent(DEFAULT_ACCENT_COLOR));
+accentInput.addEventListener("input", () => previewAccent(accentInput.value));
+settingsDialog.addEventListener("click", (event) => { if (event.target === settingsDialog) cancelSettings(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !settingsDialog.hidden) cancelSettings(); });
+document.querySelector("#settings-save")!.addEventListener("click", async () => {
+  const accentColor = applyAccentColor(accentInput.value);
+  try {
+    await saveSettings({ accentColor });
+    catalog.settings.accentColor = accentColor;
+    savedAccentColor = accentColor;
+    settingsDialog.hidden = true;
+    showToast("外観設定を保存しました");
+  } catch (error) { showToast(String(error), true); }
+});
 
 function escapeHtml(value: string | number | undefined): string {
   return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]!);
@@ -75,7 +131,7 @@ function renderSidebar(): void {
     <div class="nav-heading"><span>フォルダ</span></div>
     <div class="nav-section">${folders.length ? folders.map((folder) => nav(`folder:${folder}`, "▸", folder, catalog.hosts.filter((h) => h.metadata.folder === folder).length)).join("") : '<p class="nav-empty">まだありません</p>'}</div>
     <div class="nav-heading"><span>タグ</span></div>
-    <div class="tag-cloud">${tags.map((tag) => `<button data-scope="tag:${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}</div>
+    <div class="tag-cloud">${tags.map((tag) => `<button class="${scope === `tag:${tag}` ? "active" : ""}" data-scope="tag:${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}</div>
     <div class="config-path"><span>読込元</span><code>${escapeHtml(catalog.configPath)}</code></div>`;
   document.querySelectorAll<HTMLElement>("[data-scope]").forEach((item) => item.addEventListener("click", () => setScope(item.dataset.scope as Scope)));
 }
@@ -168,6 +224,7 @@ async function connectSelected(): Promise<void> {
 async function load(): Promise<void> {
   try {
     catalog = await getCatalog();
+    catalog.settings.accentColor = applyAccentColor(catalog.settings.accentColor);
     selectedAlias = catalog.hosts[0]?.alias ?? "";
     renderSidebar(); renderList();
     if (catalog.warnings.length) showToast(catalog.warnings[0], true);

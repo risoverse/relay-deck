@@ -253,7 +253,7 @@ RelayDeckは次を読み取り専用で扱う。
 
 ### RelayDeckメタデータ
 
-フォルダ、タグ、お気に入り、メモ、接続履歴はmacOSのアプリデータ領域にある `state.json` へ保存される。想定パスは次のとおり。
+フォルダ、タグ、お気に入り、メモ、接続履歴、アクセントカラーはmacOSのアプリデータ領域にある `state.json` へ保存される。想定パスは次のとおり。
 
 ```text
 ~/Library/Application Support/app.relaydeck.desktop/state.json
