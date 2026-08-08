@@ -1,0 +1,19 @@
+[package]
+name = "relaydeck"
+version = "0.1.1"
+description = "A lightweight macOS connection manager for iTerm2"
+authors = ["RelayDeck contributors"]
+edition = "2021"
+
+[lib]
+name = "relaydeck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+glob = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
