@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "icon:generate": "tauri icon assets/icon.png",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "version": "node scripts/sync-version.mjs && git add src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
