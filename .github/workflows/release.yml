@@ -1,0 +1,66 @@
+name: Release macOS build
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Rust for Apple Silicon
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Verify release version
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          app_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          package_version="$(node -p "require('./package.json').version")"
+          cargo_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' src-tauri/Cargo.toml | head -n 1)"
+          test "$tag_version" = "$app_version"
+          test "$tag_version" = "$package_version"
+          test "$tag_version" = "$cargo_version"
+      - name: Test frontend
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Test Rust backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Build DMG and create draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: "-"
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: RelayDeck ${{ github.ref_name }}
+          releaseBody: |
+            ## 対応環境
+
+            - Apple Silicon搭載Mac
+            - macOS 12以降
+
+            Intel Macには対応していません。
+          generateReleaseNotes: true
+          releaseDraft: true
+          prerelease: false
+          args: --target aarch64-apple-darwin --bundles dmg

@@ -2,8 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
   pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,7 +26,7 @@ jobs:
       - name: Build frontend
         run: npm run build
       - name: Select stable Rust
-        run: rustup default stable
+        uses: dtolnay/rust-toolchain@stable
       - name: Check Rust formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - name: Test Rust backend

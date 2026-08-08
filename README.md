@@ -2,6 +2,8 @@
 
 RelayDeckは、`~/.ssh/config` の接続先をRoyal TSX風の一覧で整理し、iTerm2で開くmacOS向け接続マネージャです。内蔵ターミナルや認証情報ストアは持ちません。
 
+対応環境はApple Silicon搭載MacとmacOS 12以降です。Intel Macには対応しません。
+
 ## 主な機能
 
 - OpenSSH configとInclude先から接続先を読込
@@ -29,8 +31,11 @@ npm run dev
 macOSアプリを作成する場合は次を実行します。
 
 ```sh
-npm run tauri build -- --bundles app
+rustup target add aarch64-apple-darwin
+npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
 ```
+
+`develop`へpushするとテスト用DMGがGitHub ActionsのArtifactに保存される。`v0.2.0`のようなバージョンタグをpushすると、DMG付きのDraft Releaseが作成される。
 
 ## データ
 

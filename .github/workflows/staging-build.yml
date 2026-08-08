@@ -1,0 +1,48 @@
+name: Staging macOS build
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Rust for Apple Silicon
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Test frontend
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - name: Test Rust backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Build Apple Silicon DMG
+        env:
+          APPLE_SIGNING_IDENTITY: "-"
+        run: npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
+      - name: Upload staging DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: RelayDeck-macos-arm64-${{ github.sha }}
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14

@@ -18,7 +18,7 @@ SSH接続定義は `~/.ssh/config` を単一の正とする。RelayDeckはSSH co
 
 | 項目 | 推奨環境 |
 |---|---|
-| macOS | macOS 12以降 |
+| macOS | Apple Silicon搭載Mac、macOS 12以降 |
 | Node.js | 22系 |
 | npm | `package-lock.json` と互換性のあるバージョン |
 | Rust | stable |
@@ -200,16 +200,19 @@ SSH configの読込、メタデータ保存、iTerm2起動に関係する変更�
 ## 6. macOSアプリを生成する
 
 ```sh
-npm run tauri build -- --bundles app
+rustup target add aarch64-apple-darwin
+npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
 ```
 
-成功すると次にアプリが作られる。
+成功すると次にApple Silicon用DMGが作られる。
 
 ```text
-src-tauri/target/release/bundle/macos/RelayDeck.app
+src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/RelayDeck_*.dmg
 ```
 
-現在のビルドは開発用で、Apple Developer IDによる署名と公証は行っていない。他のMacへ配布するとGatekeeperの警告が出る可能性がある。一般配布の前にコード署名、公証、更新方式を追加する。
+配布対象はApple Silicon搭載Macのみで、Intel Macは対応しない。現在のビルドは開発用で、Apple Developer IDによる署名と公証は行っていない。他のMacへ配布するとGatekeeperの警告が出る可能性がある。一般配布の前にコード署名、公証、更新方式を追加する。
+
+`develop`へpushすると、GitHub Actionsがテスト用DMGを生成し、14日間保持するArtifactとして保存する。`v0.2.0`のようなバージョンタグをpushすると、同じバージョンのDMGを添付したDraft Releaseを生成する。タグ、`package.json`、`Cargo.toml`、`tauri.conf.json`のバージョンは一致させる。
 
 ## 7. ファイル構成
 
