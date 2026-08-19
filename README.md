@@ -1,8 +1,8 @@
 # RelayDeck
 
-RelayDeckは、`~/.ssh/config` の接続先をRoyal TSX風の一覧で整理し、iTerm2で開くmacOS向け接続マネージャです。内蔵ターミナルや認証情報ストアは持ちません。
+`~/.ssh/config` の接続先をRoyal TSX風の一覧で整理し、iTerm2で開くmacOS用接続マネージャ。内蔵ターミナルと認証情報ストアは持たない。
 
-対応環境はApple Silicon搭載MacとmacOS 12以降です。Intel Macには対応しません。
+対応環境はApple Silicon Mac、macOS 12以降。Intel Mac非対応。
 
 ## 主な機能
 
@@ -15,7 +15,7 @@ RelayDeckは、`~/.ssh/config` の接続先をRoyal TSX風の一覧で整理し�
 
 ## 開発
 
-必要なものはNode.js、Rust、macOS Command Line Tools、iTerm2です。
+必要: Node.js、Rust、macOS Command Line Tools、iTerm2
 
 ```sh
 npm ci
@@ -23,35 +23,39 @@ npm test
 npm run tauri dev
 ```
 
-ブラウザUIだけを確認する場合は次を実行します。
+ブラウザUIのみ:
 
 ```sh
 npm run dev
 ```
 
-macOSアプリを作成する場合は次を実行します。
+macOSアプリのビルド:
 
 ```sh
 rustup target add aarch64-apple-darwin
 npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
 ```
 
-`develop`へpushするとテスト用DMGがGitHub ActionsのArtifactに保存される。`v0.2.0`のようなバージョンタグをpushすると、DMG付きのDraft Releaseが作成される。
+`develop`へpushでテスト用DMGがGitHub ActionsのArtifactに保存。`v0.2.0`のようなバージョンタグのpushでDMG付きDraft Releaseを作成。
 
 ## データ
 
-- SSH接続定義: `~/.ssh/config`。RelayDeckは読み取り専用
-- 整理用メタデータ: macOSのRelayDeckアプリデータ領域にある `state.json`
+- SSH接続定義: `~/.ssh/config`（読み取り専用）
+- 整理用メタデータ: macOSのアプリデータ領域にある `state.json`
 - パスワード、秘密鍵、パスフレーズ: 保存しない
 
-詳しい判断は [plan.md](plan.md)、[要件定義](docs/requirements.md)、[アーキテクチャ](docs/architecture.md)を参照してください。
+設計の経緯は [plan.md](plan.md)、[要件定義](docs/requirements.md)、[アーキテクチャ](docs/architecture.md)を参照。
 
-開発環境の初回構築、日常の起動、テスト、macOSアプリ生成については [開発環境構築・運用手順書](docs/development.md)を参照してください。
+環境構築、起動、テスト、アプリ生成は [開発環境構築・運用手順書](docs/development.md)を参照。
 
 ## セキュリティ
 
-脆弱性を見つけた場合は [SECURITY.md](SECURITY.md) に従い、SSH接続先、秘密鍵、認証情報を公開Issueへ記載しないでください。
+脆弱性の報告は [SECURITY.md](SECURITY.md) に従う。SSH接続先、秘密鍵、認証情報は公開Issueへ書かない。
 
 ## ライセンス
 
-ライセンスは未選定です。ライセンスファイルが追加されるまで、ソースコードの再利用・再配布に対する許諾は付与されません。
+未選定。ライセンスファイルが追加されるまで、再利用・再配布の許諾は付与しない。
+
+---
+
+[risoverse.co.jp](https://risoverse.co.jp/)
